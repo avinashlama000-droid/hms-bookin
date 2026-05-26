@@ -50,7 +50,7 @@ type PublicLocationsResponse = {
   data?: PublicLocation[];
 };
 
-type BookingResponse = {
+export type BookingResponse = {
   status?: string;
   message?: string;
   data?: {
@@ -59,7 +59,7 @@ type BookingResponse = {
   };
 };
 
-type ApiErrorBody = {
+export type ApiErrorBody = {
   message?: string;
   errors?: Record<string, string[]>;
 };
@@ -124,24 +124,4 @@ export async function fetchPublicLocations(): Promise<PublicLocation[]> {
     });
     return [];
   }
-}
-
-export async function createBookingInquiry(payload: BookingPayload): Promise<BookingResponse> {
-  const response = await fetch(endpoint("/public/bookings"), {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const body = (await response.json().catch(() => ({}))) as BookingResponse & ApiErrorBody;
-
-  if (!response.ok) {
-    const firstValidationMessage = body.errors ? Object.values(body.errors).flat()[0] : null;
-    throw new Error(firstValidationMessage || body.message || "Booking inquiry could not be sent.");
-  }
-
-  return body;
 }

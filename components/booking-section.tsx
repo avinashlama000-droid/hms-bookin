@@ -5,9 +5,10 @@ import type { Dispatch, FormEvent, SetStateAction } from "react";
 import { useMemo, useRef, useState } from "react";
 import {
   attachmentUrl,
-  createBookingInquiry,
+  type ApiErrorBody,
   type AvailableRoom,
   type BookingPayload,
+  type BookingResponse,
 } from "@/lib/booking";
 
 type BookingSectionProps = {
@@ -28,6 +29,26 @@ const initialForm: BookingFormState = {
   phone: "",
   description: "",
 };
+
+async function createBookingInquiry(payload: BookingPayload): Promise<BookingResponse> {
+  const response = await fetch("/api/bookings", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const body = (await response.json().catch(() => ({}))) as BookingResponse & ApiErrorBody;
+
+  if (!response.ok) {
+    const firstValidationMessage = body.errors ? Object.values(body.errors).flat()[0] : null;
+    throw new Error(firstValidationMessage || body.message || "Booking inquiry could not be sent.");
+  }
+
+  return body;
+}
 
 export function BookingSection({ rooms, variant = "full" }: BookingSectionProps) {
   const [search, setSearch] = useState("");
