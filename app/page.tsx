@@ -1,109 +1,406 @@
 import {
-  Building2,
+  ArrowRight,
+  BedDouble,
+  BookOpen,
+  CheckCircle2,
+  MapPin,
+  Navigation,
+  Search,
   ShieldCheck,
-  Users,
-  WalletCards,
+  Sparkles,
+  Utensils,
+  Wifi,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { BookingSection } from "@/components/booking-section";
 import { Button } from "@/components/button";
-import { LocationMapDialog } from "@/components/location-map-dialog";
+import { MealMenuSection } from "@/components/meal-menu-section";
+import { PublicLocationMap } from "@/components/public-location-map";
+import { Section } from "@/components/section";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { fetchAvailableRooms, fetchPublicLocations, type AvailableRoom, type PublicLocation } from "@/lib/booking";
-import { appUrl } from "@/lib/site-config";
+import {
+  attachmentUrl,
+  fetchAvailableRooms,
+  fetchPublicLocations,
+  fetchPublicMealMenus,
+  type AvailableRoom,
+  type PublicLocation,
+  type PublicMealMenu,
+} from "@/lib/booking";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [availableRooms, publicLocations] = await Promise.all([
+  const [availableRooms, publicLocations, mealMenus] = await Promise.all([
     fetchAvailableRooms(),
     fetchPublicLocations(),
+    fetchPublicMealMenus(),
   ]);
+
+  const stats = getPublicStats(availableRooms, publicLocations, mealMenus);
 
   return (
     <main id="top" className="min-h-[100svh] bg-surface-page text-muted-900">
       <SiteHeader />
-      <Hero availableRooms={availableRooms} publicLocations={publicLocations} />
+      <Hero stats={stats} rooms={availableRooms} locations={publicLocations} mealMenus={mealMenus} />
+      <AvailableRoomsSection rooms={availableRooms} mealMenus={mealMenus} />
+      <MealMenuSection menus={mealMenus} />
+      <FacilitiesSection />
+      <LocationSection locations={publicLocations} stats={stats} />
+      <SiteFooter />
     </main>
   );
 }
 
 function Hero({
-  availableRooms,
-  publicLocations,
+  stats,
+  rooms,
+  locations,
+  mealMenus,
 }: {
-  availableRooms: AvailableRoom[];
-  publicLocations: PublicLocation[];
+  stats: PublicStats;
+  rooms: AvailableRoom[];
+  locations: PublicLocation[];
+  mealMenus: PublicMealMenu[];
+}) {
+  const featuredRoom = rooms[0] ?? null;
+  const featuredMealMenu = featuredRoom
+    ? mealMenus.find((menu) => menu.tenant_slug === featuredRoom.tenant_slug && menu.block_id === featuredRoom.block_id)
+    : null;
+  const featuredLocation = featuredRoom
+    ? locations.find((location) => location.tenant_slug === featuredRoom.tenant_slug && location.block_id === featuredRoom.block_id) ?? null
+    : locations[0] ?? null;
+
+  return (
+    <section className="futuristic-surface relative border-b border-white/70 pt-10">
+      <div className="pointer-events-none absolute inset-0 dashboard-grid opacity-45" aria-hidden="true" />
+      <div className="container-grid relative z-10 grid min-h-[calc(100svh-4rem)] items-center gap-10 py-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,0.9fr)] lg:py-16 xl:gap-14">
+        <div className="max-w-3xl">
+          <div className="glass-card inline-flex items-center gap-2 rounded-full px-4 py-2 text-[0.7rem] font-black uppercase tracking-[0.16em] text-brand-800">
+            <Sparkles className="h-4 w-4" />
+            Calm hostel booking for students
+          </div>
+          <h1 className="mt-6 max-w-4xl text-4xl font-black leading-[1.02] text-muted-900 sm:text-5xl lg:text-6xl">
+            Find your hostel room with meals, location, and availability in one place.
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-600 sm:text-lg">
+            Compare available hostel rooms, check the published meal menu, and send a room inquiry
+            without calling every block one by one.
+          </p>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <Button href="#available-rooms" className="h-12 px-6">
+              Book room
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <Button href="#location" variant="secondary" className="h-11 px-5" icon={<MapPin className="h-4 w-4" />}>
+              View GPS location
+            </Button>
+          </div>
+          <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+            <TrustChip icon={<Search className="h-4 w-4" />} label="Live room search" />
+            <TrustChip icon={<Utensils className="h-4 w-4" />} label="Meal menu check" />
+            <TrustChip icon={<ShieldCheck className="h-4 w-4" />} label="Inquiry saved to HMS" />
+          </div>
+        </div>
+
+        <HeroBookingPreview
+          room={featuredRoom}
+          mealMenu={featuredMealMenu ?? null}
+          location={featuredLocation}
+          stats={stats}
+        />
+      </div>
+    </section>
+  );
+}
+
+function HeroBookingPreview({
+  room,
+  mealMenu,
+  location,
+  stats,
+}: {
+  room: AvailableRoom | null;
+  mealMenu: PublicMealMenu | null;
+  location: PublicLocation | null;
+  stats: PublicStats;
+}) {
+  const image = room ? roomImage(room) : null;
+
+  return (
+    <div className="glass-card overflow-hidden rounded-ui p-3 shadow-deep">
+      <div className="relative overflow-hidden rounded-ui bg-gradient-to-br from-brand-900 via-brand-700 to-signal-cyan p-3 text-white shadow-glow">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.28),transparent_38%)]" aria-hidden="true" />
+        <div className="relative overflow-hidden rounded-ui border border-white/30 bg-white text-muted-900 shadow-deep">
+          <div className="relative aspect-[16/10] bg-surface-header">
+            {image ? (
+              <img src={image} alt={room?.room_name || "Featured hostel room"} className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#e9eef4,#f8fafc_45%,#dbeafe)]">
+                <div className="grid h-24 w-24 place-items-center rounded-full bg-white/70 text-brand-700 shadow-lift">
+                  <BedDouble className="h-12 w-12" />
+                </div>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-muted-900/78 via-muted-900/12 to-transparent" />
+            <div className="absolute left-4 right-4 top-4 flex items-start justify-between gap-3">
+              <span className="rounded-full bg-white/92 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-brand-800 shadow-crisp backdrop-blur">
+                {room ? room.tenant_name : "Live availability"}
+              </span>
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 shadow-crisp">
+                {room ? `${room.vacant_beds} beds vacant` : `${stats.vacantBeds} beds vacant`}
+              </span>
+            </div>
+            <div className="absolute bottom-4 left-4 right-4">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-white/80">
+                {room?.block_name || "Student hostel room"}
+              </p>
+              <h2 className="mt-1 line-clamp-2 text-2xl font-black leading-tight text-white">
+                {room?.room_name || "Find an available room before you visit"}
+              </h2>
+              <p className="mt-2 text-sm font-semibold text-white/85">
+                {room ? `${formatRoomType(room.room_type)} · ${formatRate(room.monthly_rate)}` : "Compare rooms, meals, and mapped blocks"}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 p-4 sm:grid-cols-3">
+            <PreviewFact icon={<BedDouble className="h-4 w-4" />} label="Rooms" value={stats.availableRooms} detail="listed" />
+            <PreviewFact icon={<Utensils className="h-4 w-4" />} label="Meals" value={stats.publishedMealMenus} detail={mealMenu?.menu ? "published" : "menus"} />
+            <PreviewFact icon={<Navigation className="h-4 w-4" />} label="Maps" value={stats.mappedHostels} detail={location ? "blocks" : "ready"} />
+          </div>
+
+          <div className="border-t border-border bg-surface-subtle p-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SignalPill icon={<CheckCircle2 className="h-4 w-4" />} label={mealMenu?.menu ? "Meal menu available" : "Meal menu appears when published"} />
+              <SignalPill icon={<MapPin className="h-4 w-4" />} label={location?.tenant_name || "Mapped hostels appear here"} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrustChip({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <div className="glass-card flex items-center gap-2 rounded-ui px-3 py-3 text-sm font-bold text-muted-800">
+      <span className="grid h-8 w-8 place-items-center rounded-ui bg-brand-50 text-brand-700">{icon}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function PreviewFact({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number;
+  detail: string;
 }) {
   return (
-    <section className="flex min-h-[calc(100svh-3.5rem)] items-center bg-surface-page">
-      <div className="mx-auto grid min-h-[calc(100svh-3.5rem)] max-w-7xl items-center gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:grid-cols-[minmax(0,0.86fr)_minmax(430px,1.14fr)] lg:gap-7 lg:px-8">
-        <div className="min-w-0">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-brand-700 shadow-sm sm:text-sm">
-            <Building2 className="h-4 w-4" />
-            Hostel operations, clearly connected
+    <div className="rounded-ui bg-surface-page p-3">
+      <div className="flex items-center gap-2 text-brand-700">
+        {icon}
+        <span className="text-xs font-black uppercase tracking-[0.12em] text-muted-500">{label}</span>
+      </div>
+      <p className="mt-2 text-2xl font-black text-muted-900">{value}</p>
+      <p className="text-xs font-bold text-muted-500">{detail}</p>
+    </div>
+  );
+}
+
+function SignalPill({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2 rounded-ui bg-white px-3 py-2 text-sm font-bold text-muted-700 shadow-crisp">
+      <span className="shrink-0 text-brand-700">{icon}</span>
+      <span className="truncate">{label}</span>
+    </div>
+  );
+}
+
+function AvailableRoomsSection({
+  rooms,
+  mealMenus,
+}: {
+  rooms: AvailableRoom[];
+  mealMenus: PublicMealMenu[];
+}) {
+  return (
+    <Section
+      id="available-rooms"
+      eyebrow="Available hostel rooms"
+      title="Choose a room that fits your study routine."
+      description="Filter by hostel, block, room type, or location. Each room keeps the live inquiry form connected to HMS."
+      tone="white"
+    >
+      <BookingSection rooms={rooms} mealMenus={mealMenus} showMealMenuPanel={false} />
+    </Section>
+  );
+}
+
+function FacilitiesSection() {
+  const facilities = [
+    {
+      title: "Study-friendly rooms",
+      description: "Simple room details make it easier to compare capacity, floor, and pricing.",
+      icon: <BookOpen className="h-5 w-5" />,
+    },
+    {
+      title: "Meal visibility",
+      description: "Students can check breakfast, lunch, snacks, and dinner before sending an inquiry.",
+      icon: <Utensils className="h-5 w-5" />,
+    },
+    {
+      title: "Internet-ready stay",
+      description: "A calm booking surface for hostels that support everyday student work.",
+      icon: <Wifi className="h-5 w-5" />,
+    },
+    {
+      title: "Safer decisions",
+      description: "Mapped blocks and published availability reduce uncertainty before a visit.",
+      icon: <ShieldCheck className="h-5 w-5" />,
+    },
+  ];
+
+  return (
+    <Section
+      id="facilities"
+      eyebrow="Student facilities"
+      title="Everything students check before choosing a hostel."
+      description="Keep the page focused on what matters first: room fit, food, study comfort, and location confidence."
+    >
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {facilities.map((item) => (
+          <article key={item.title} className="premium-card rounded-ui p-5 transition duration-200 hover:-translate-y-1 hover:shadow-lift">
+            <div className="flex h-11 w-11 items-center justify-center rounded-ui bg-brand-50 text-brand-700 ring-1 ring-brand-100">
+              {item.icon}
+            </div>
+            <h3 className="mt-4 text-lg font-black text-muted-900">{item.title}</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-600">{item.description}</p>
+          </article>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function LocationSection({
+  locations,
+  stats,
+}: {
+  locations: PublicLocation[];
+  stats: PublicStats;
+}) {
+  return (
+    <section id="location" className="scroll-mt-24 border-b border-white/70 bg-surface-page">
+      <div className="container-grid py-16 sm:py-20 lg:py-24">
+        <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-stretch">
+          <div className="flex flex-col justify-center">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-700">GPS location</p>
+            <h2 className="mt-3 text-2xl font-black leading-tight text-muted-900 sm:text-4xl">
+              See hostel blocks before you visit.
+            </h2>
+            <p className="mt-4 text-base leading-7 text-muted-600">
+              Search mapped hostel blocks and jump from location to available rooms when beds are open.
+            </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <LocationFact icon={<MapPin className="h-4 w-4" />} label="Mapped blocks" value={stats.mappedHostels} />
+              <LocationFact icon={<BedDouble className="h-4 w-4" />} label="Vacant beds" value={stats.vacantBeds} />
+            </div>
           </div>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-600 sm:text-base lg:text-lg lg:leading-7">
-            Manage students, rooms, payments, staff, notices, complaints, inquiries, and reports
-            from one clean workspace built for daily hostel work.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2 sm:mt-6">
-            <FeatureChip icon={<Users className="h-4 w-4" />} label="Students & rooms" />
-            <FeatureChip icon={<WalletCards className="h-4 w-4" />} label="Payments & dues" />
-            <FeatureChip icon={<ShieldCheck className="h-4 w-4" />} label="Roles & reports" />
+
+          <div className="glass-card min-h-[440px] overflow-hidden rounded-ui p-2">
+            {locations.length > 0 ? (
+              <div className="min-h-[440px] overflow-hidden rounded-ui">
+                <PublicLocationMap locations={locations} />
+              </div>
+            ) : (
+              <div className="flex min-h-[440px] flex-col items-center justify-center rounded-ui bg-[linear-gradient(135deg,#f8fafc,#eef3f8)] px-6 text-center">
+                <span className="grid h-16 w-16 place-items-center rounded-full bg-white text-brand-700 shadow-lift">
+                  <MapPin className="h-8 w-8" />
+                </span>
+                <p className="mt-4 text-lg font-black text-muted-900">No mapped hostel locations yet.</p>
+                <p className="mt-2 max-w-md text-sm leading-6 text-muted-600">
+                  Add latitude and longitude to hostel blocks in HMS to show GPS locations here.
+                </p>
+              </div>
+            )}
           </div>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Button href={appUrl}>Open HMS</Button>
-            <LocationMapDialog locations={publicLocations} />
-          </div>
-          <MobileSummary availableCount={availableRooms.length} />
-        </div>
-        <div id="available-rooms" className="hidden min-h-0 scroll-mt-20 lg:block">
-          <BookingSection rooms={availableRooms} variant="compact" />
         </div>
       </div>
     </section>
   );
 }
 
-function MobileSummary({ availableCount }: { availableCount: number }) {
-  return (
-    <div className="mt-6 grid grid-cols-3 gap-2 lg:hidden">
-      <SmallSignal label="Students" value="126" />
-      <SmallSignal label="Dues" value="18" tone="warning" />
-      <SmallSignal label="Rooms" value={String(availableCount)} tone="success" />
-    </div>
-  );
-}
-
-function SmallSignal({
+function LocationFact({
+  icon,
   label,
   value,
-  tone = "brand",
 }: {
+  icon: ReactNode;
   label: string;
-  value: string;
-  tone?: "brand" | "success" | "warning";
+  value: number;
 }) {
-  const toneClasses = {
-    brand: "text-brand-700",
-    success: "text-emerald-700",
-    warning: "text-amber-700",
-  };
-
   return (
-    <div className="rounded-lg border border-border bg-white px-3 py-2 shadow-sm">
-      <p className={`text-lg font-bold leading-none ${toneClasses[tone]}`}>{value}</p>
-      <p className="mt-1 truncate text-xs font-semibold text-muted-600">{label}</p>
+    <div className="premium-card rounded-ui p-4">
+      <div className="flex items-center gap-2 text-brand-700">
+        {icon}
+        <span className="text-sm font-black text-muted-900">{label}</span>
+      </div>
+      <p className="mt-2 text-3xl font-black text-muted-900">{value}</p>
     </div>
   );
 }
 
-function FeatureChip({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <div className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-white px-3 text-sm font-semibold text-muted-700 shadow-sm">
-      <span className="text-brand-700">{icon}</span>
-      <span>{label}</span>
-    </div>
-  );
+function roomImage(room: AvailableRoom): string | null {
+  return attachmentUrl(room.room_attachment) || attachmentUrl(room.block_attachment);
+}
+
+function formatRoomType(type: string): string {
+  return type
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function formatRate(value: string | number | null): string {
+  if (value === null || value === undefined || value === "") return "Ask admin";
+
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return String(value);
+
+  return new Intl.NumberFormat("en-NP", {
+    style: "currency",
+    currency: "NPR",
+    maximumFractionDigits: 0,
+  }).format(numeric);
+}
+
+type PublicStats = {
+  availableRooms: number;
+  vacantBeds: number;
+  publishedMealMenus: number;
+  mappedHostels: number;
+};
+
+function getPublicStats(
+  rooms: AvailableRoom[],
+  locations: PublicLocation[],
+  menus: PublicMealMenu[],
+): PublicStats {
+  return {
+    availableRooms: rooms.length,
+    vacantBeds: rooms.reduce((total, room) => total + room.vacant_beds, 0),
+    publishedMealMenus: menus.filter((menu) => Boolean(menu.menu)).length,
+    mappedHostels: locations.filter(
+      (location) =>
+        Number.isFinite(location.latitude) &&
+        Number.isFinite(location.longitude),
+    ).length,
+  };
 }

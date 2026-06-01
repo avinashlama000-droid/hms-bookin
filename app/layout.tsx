@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "HMS Hostel Management",
+  title: "HMS Hostel Booking",
   description:
-    "A clear hostel management website for understanding HMS operations, records, and access.",
+    "Find student hostel rooms, meal menus, and GPS locations from one calm booking website.",
 };
 
 export default function RootLayout({

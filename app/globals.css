@@ -16,6 +16,7 @@
 
 html {
   scroll-behavior: smooth;
+  text-rendering: geometricPrecision;
 }
 
 body {
@@ -39,4 +40,81 @@ a:focus-visible {
 ::selection {
   background: #d3ddea;
   color: #15355b;
+}
+
+.container-grid {
+  width: min(100% - 32px, 1180px);
+  margin-inline: auto;
+}
+
+@media (min-width: 768px) {
+  .container-grid {
+    width: min(100% - 56px, 1180px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-grid {
+    width: min(100% - 72px, 1280px);
+  }
+}
+
+@media (min-width: 1280px) {
+  .container-grid {
+    width: min(100% - 96px, 1440px);
+  }
+}
+
+.dashboard-grid {
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.055) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+@layer components {
+  .futuristic-surface {
+    position: relative;
+    overflow: hidden;
+    background: #f6f8fb;
+  }
+
+  .futuristic-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(15, 23, 42, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(15, 23, 42, 0.045) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: linear-gradient(120deg, black, transparent 72%);
+  }
+
+  .glass-card {
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    background: rgba(255, 255, 255, 0.76);
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.84);
+    backdrop-filter: blur(22px) saturate(140%);
+  }
+
+  .glass-button {
+    position: relative;
+    overflow: hidden;
+    border-color: #2563eb;
+    background: #2563eb;
+    box-shadow: 0 16px 36px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+    backdrop-filter: blur(14px) saturate(150%);
+  }
+
+  .glass-button:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+  }
+
+  .premium-card {
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
+  }
 }

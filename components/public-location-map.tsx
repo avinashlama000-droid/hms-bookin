@@ -37,7 +37,7 @@ export function PublicLocationMap({ locations }: PublicLocationMapProps) {
     if (!normalizedQuery) return mappedLocations;
 
     return mappedLocations.filter((item) =>
-      [item.block_name, item.tenant_name, item.location]
+      [item.tenant_name, item.block_name, item.location]
         .filter(Boolean)
         .some((value) => value?.toLowerCase().includes(normalizedQuery)),
     );
@@ -185,7 +185,7 @@ export function PublicLocationMap({ locations }: PublicLocationMapProps) {
   return (
     <div className="relative h-full min-h-[420px] w-full">
       <div
-        className="absolute left-3 top-3 z-[1000] w-[min(22rem,calc(100%-1.5rem))] rounded-lg border border-border bg-white shadow-soft"
+        className="absolute left-3 top-3 z-[1000] w-[min(22rem,calc(100%-1.5rem))] rounded-ui border border-white/80 bg-white/94 shadow-deep backdrop-blur"
         onMouseDown={(event) => event.stopPropagation()}
         onTouchStart={(event) => event.stopPropagation()}
       >
@@ -222,12 +222,11 @@ export function PublicLocationMap({ locations }: PublicLocationMapProps) {
                   />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-bold text-muted-900">
-                      {item.block_name || "Block"}
-                    </span>
-                    <span className="block truncate text-xs font-semibold text-muted-600">
                       {item.tenant_name}
                     </span>
-                    <span className="block truncate text-xs text-muted-500">{item.location}</span>
+                    <span className="block truncate text-xs font-semibold text-muted-600">
+                      {item.block_name || "Block"}
+                    </span>
                   </span>
                 </button>
               );
@@ -314,8 +313,7 @@ function getLocationByKey(
 function hasMappedLocation(item: PublicLocation): boolean {
   return (
     Number.isFinite(item.latitude) &&
-    Number.isFinite(item.longitude) &&
-    Boolean(item.location?.trim())
+    Number.isFinite(item.longitude)
   );
 }
 
@@ -334,13 +332,6 @@ function createPopupContent(item: PublicLocation): HTMLDivElement {
 
   heading.append(tenantName, blockName);
   wrapper.append(heading);
-
-  if (item.location) {
-    const location = document.createElement("p");
-    location.className = "text-xs leading-5 text-slate-600";
-    location.textContent = item.location;
-    wrapper.append(location);
-  }
 
   const stats = document.createElement("div");
   stats.className = "grid grid-cols-2 gap-2 text-xs";

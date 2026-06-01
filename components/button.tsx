@@ -12,9 +12,9 @@ type ButtonProps = {
 };
 
 const variants: Record<ButtonVariant, string> = {
-  primary: "bg-brand-600 text-white hover:bg-brand-700 shadow-sm",
+  primary: "glass-button border text-white hover:brightness-105",
   secondary:
-    "border border-border bg-white text-muted-800 hover:border-border-strong hover:bg-surface-subtle",
+    "border border-white/70 bg-white/85 text-muted-800 shadow-crisp hover:border-brand-200 hover:bg-white",
   ghost: "text-muted-700 hover:bg-muted-100",
 };
 
@@ -25,7 +25,7 @@ export function Button({
   variant = "primary",
   className = "",
 }: ButtonProps) {
-  const classes = `inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-all duration-200 ${variants[variant]} ${className}`;
+  const classes = `inline-flex h-10 items-center justify-center gap-2 rounded-ui px-4 text-sm font-bold transition-all duration-200 ${variants[variant]} ${className}`;
 
   if (href) {
     return (
