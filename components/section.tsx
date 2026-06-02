@@ -17,21 +17,26 @@ export function Section({
   children,
   tone = "page",
 }: SectionProps) {
+  const toneClasses =
+    tone === "white"
+      ? "border-border bg-surface-card"
+      : "border-brand-100/80 bg-surface-page";
+
   return (
-    <section id={id} className={`scroll-mt-24 border-b border-white/70 ${tone === "white" ? "bg-white" : "bg-surface-page"}`}>
-      <div className="container-grid py-16 sm:py-20 lg:py-24">
+    <section id={id} className={`scroll-mt-24 border-b ${toneClasses}`}>
+      <div className="container-grid py-12 sm:py-16 lg:py-20">
         <div className="max-w-3xl">
           {eyebrow && (
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-brand-700">
+            <p className="mb-2 text-[0.65rem] font-black uppercase tracking-[0.18em] text-brand-700">
               {eyebrow}
             </p>
           )}
-          <h2 className="text-2xl font-black leading-tight text-muted-900 sm:text-4xl">{title}</h2>
+          <h2 className="text-xl font-black leading-tight text-muted-900 sm:text-3xl">{title}</h2>
           {description && (
-            <p className="mt-4 text-base leading-7 text-muted-600">{description}</p>
+            <p className="mt-3 text-sm leading-6 text-muted-600">{description}</p>
           )}
         </div>
-        <div className="mt-9">{children}</div>
+        <div className="mt-7">{children}</div>
       </div>
     </section>
   );

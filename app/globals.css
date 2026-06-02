@@ -6,7 +6,7 @@
 
 :root {
   color-scheme: light;
-  background: #f6f8fb;
+  background: #eaf0f7;
   color: #0f172a;
 }
 
@@ -17,13 +17,15 @@
 html {
   scroll-behavior: smooth;
   text-rendering: geometricPrecision;
+  overflow-x: clip;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background: #f6f8fb;
+  background: #eaf0f7;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overflow-x: hidden;
 }
 
 button,
@@ -73,10 +75,18 @@ a:focus-visible {
 }
 
 @layer components {
+  .site-header-fixed {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 2147483647;
+  }
+
   .futuristic-surface {
     position: relative;
     overflow: hidden;
-    background: #f6f8fb;
+    background:
+      linear-gradient(135deg, rgba(35, 89, 153, 0.06), transparent 42%),
+      #eaf0f7;
   }
 
   .futuristic-surface::before {
@@ -92,9 +102,8 @@ a:focus-visible {
   }
 
   .glass-card {
-    border: 1px solid rgba(255, 255, 255, 0.68);
-    background: rgba(255, 255, 255, 0.76);
-    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.84);
+    border: 1px solid rgba(189, 205, 224, 0.78);
+    background: rgba(249, 251, 253, 0.76);
     backdrop-filter: blur(22px) saturate(140%);
   }
 
@@ -103,7 +112,6 @@ a:focus-visible {
     overflow: hidden;
     border-color: #2563eb;
     background: #2563eb;
-    box-shadow: 0 16px 36px rgba(37, 99, 235, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
     backdrop-filter: blur(14px) saturate(150%);
   }
 
@@ -113,8 +121,108 @@ a:focus-visible {
   }
 
   .premium-card {
-    border: 1px solid rgba(255, 255, 255, 0.72);
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
+    border: 1px solid rgba(189, 205, 224, 0.82);
+    background: rgba(249, 251, 253, 0.86);
+  }
+
+  .rooms-marquee {
+    --room-card-width: clamp(15.6rem, 67vw, 20.8rem);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .rooms-marquee__viewport {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-block: 0.4rem 1rem;
+    scroll-padding-inline: 0;
+    scrollbar-width: none;
+  }
+
+  .rooms-marquee__viewport::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rooms-marquee__track {
+    display: flex;
+    width: max-content;
+    gap: 0.8rem;
+    padding-inline: 0;
+  }
+
+  .rooms-marquee__card {
+    width: var(--room-card-width);
+    flex: 0 0 var(--room-card-width);
+  }
+
+  .rooms-marquee__control {
+    position: absolute;
+    top: 50%;
+    z-index: 3;
+    display: grid;
+    height: 2.75rem;
+    width: 2.75rem;
+    translate: 0 -50%;
+    place-items: center;
+    border: 1px solid rgba(203, 213, 225, 0.9);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #1f4f8a;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
+    transition:
+      background 160ms ease,
+      border-color 160ms ease,
+      color 160ms ease,
+      transform 160ms ease;
+  }
+
+  .rooms-marquee__control:hover {
+    border-color: rgba(37, 99, 235, 0.28);
+    background: #eff6ff;
+    color: #1d4ed8;
+    transform: translateY(-1px);
+  }
+
+  .rooms-marquee__control--left {
+    left: 0.5rem;
+  }
+
+  .rooms-marquee__control--right {
+    right: 0.5rem;
+  }
+
+  .hostel-map-label {
+    border: 1px solid rgba(35, 89, 153, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    color: #10233f;
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1;
+    padding: 0.35rem 0.55rem;
+  }
+
+  .hostel-map-label::before {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .rooms-marquee {
+      --room-card-width: clamp(16rem, 31vw, 21.2rem);
+    }
+
+    .rooms-marquee__track {
+      gap: 1rem;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .rooms-marquee {
+      --room-card-width: clamp(17.6rem, 18.4vw, 21.6rem);
+    }
+
+    .rooms-marquee__track {
+      gap: 1.2rem;
+    }
   }
 }

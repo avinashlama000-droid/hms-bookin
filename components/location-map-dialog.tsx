@@ -17,7 +17,7 @@ export function LocationMapDialog({ locations }: LocationMapDialogProps) {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 text-sm font-semibold text-muted-800 shadow-sm transition hover:border-border-strong hover:bg-surface-subtle"
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 text-sm font-semibold text-muted-800 transition hover:border-border-strong hover:bg-surface-subtle"
       >
         <MapPin className="h-4 w-4 text-brand-700" />
         <span>Get Map</span>
@@ -25,7 +25,7 @@ export function LocationMapDialog({ locations }: LocationMapDialogProps) {
 
       {isOpen && (
         <div className="fixed inset-0 z-[80] flex items-end bg-muted-900/45 px-3 py-3 backdrop-blur-sm sm:items-center sm:justify-center sm:px-5">
-          <div className="flex max-h-[92svh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
+          <div className="flex max-h-[92svh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white">
             <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-5">
               <div>
                 <p className="text-xs font-bold uppercase tracking-normal text-brand-700">

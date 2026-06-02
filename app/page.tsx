@@ -28,6 +28,7 @@ import {
   type PublicLocation,
   type PublicMealMenu,
 } from "@/lib/booking";
+import { BookingSearchProvider } from "@/components/booking-search-context";
 
 export const dynamic = "force-dynamic";
 
@@ -41,15 +42,17 @@ export default async function Home() {
   const stats = getPublicStats(availableRooms, publicLocations, mealMenus);
 
   return (
-    <main id="top" className="min-h-[100svh] bg-surface-page text-muted-900">
-      <SiteHeader />
-      <Hero stats={stats} rooms={availableRooms} locations={publicLocations} mealMenus={mealMenus} />
-      <AvailableRoomsSection rooms={availableRooms} mealMenus={mealMenus} />
-      <MealMenuSection menus={mealMenus} />
-      <FacilitiesSection />
-      <LocationSection locations={publicLocations} stats={stats} />
-      <SiteFooter />
-    </main>
+    <BookingSearchProvider>
+      <main id="top" className="min-h-[100svh] bg-surface-page pt-[7.75rem] text-muted-900">
+        <SiteHeader rooms={availableRooms} />
+        <Hero stats={stats} rooms={availableRooms} locations={publicLocations} mealMenus={mealMenus} />
+        <AvailableRoomsSection rooms={availableRooms} mealMenus={mealMenus} />
+        <MealMenuSection menus={mealMenus} />
+        <FacilitiesSection />
+        <LocationSection locations={publicLocations} stats={stats} />
+        <SiteFooter />
+      </main>
+    </BookingSearchProvider>
   );
 }
 
@@ -73,31 +76,31 @@ function Hero({
     : locations[0] ?? null;
 
   return (
-    <section className="futuristic-surface relative border-b border-white/70 pt-10">
-      <div className="pointer-events-none absolute inset-0 dashboard-grid opacity-45" aria-hidden="true" />
-      <div className="container-grid relative z-10 grid min-h-[calc(100svh-4rem)] items-center gap-10 py-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,0.9fr)] lg:py-16 xl:gap-14">
+    <section className="futuristic-surface relative border-b border-brand-100/80 pt-8">
+      <div className="pointer-events-none absolute inset-0 dashboard-grid opacity-35" aria-hidden="true" />
+      <div className="container-grid relative z-10 grid min-h-[calc(80svh-3.2rem)] items-center gap-8 py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(336px,0.9fr)] lg:py-12 xl:gap-11">
         <div className="max-w-3xl">
-          <div className="glass-card inline-flex items-center gap-2 rounded-full px-4 py-2 text-[0.7rem] font-black uppercase tracking-[0.16em] text-brand-800">
+          <div className="glass-card inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[0.65rem] font-black uppercase tracking-[0.16em] text-brand-800">
             <Sparkles className="h-4 w-4" />
             Calm hostel booking for students
           </div>
-          <h1 className="mt-6 max-w-4xl text-4xl font-black leading-[1.02] text-muted-900 sm:text-5xl lg:text-6xl">
+          <h1 className="mt-5 max-w-4xl text-3xl font-black leading-[1.02] text-muted-900 sm:text-4xl lg:text-5xl">
             Find your hostel room with meals, location, and availability in one place.
           </h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-muted-600 sm:text-lg">
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-600 sm:text-base">
             Compare available hostel rooms, check the published meal menu, and send a room inquiry
             without calling every block one by one.
           </p>
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Button href="#available-rooms" className="h-12 px-6">
+          <div className="mt-6 flex flex-col gap-2.5 sm:flex-row">
+            <Button href="#available-rooms" className="h-10 px-5">
               Book room
               <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button href="#location" variant="secondary" className="h-11 px-5" icon={<MapPin className="h-4 w-4" />}>
+            <Button href="#location" variant="secondary" className="h-10 px-4" icon={<MapPin className="h-4 w-4" />}>
               View GPS location
             </Button>
           </div>
-          <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+          <div className="mt-6 grid max-w-2xl gap-2.5 sm:grid-cols-3">
             <TrustChip icon={<Search className="h-4 w-4" />} label="Live room search" />
             <TrustChip icon={<Utensils className="h-4 w-4" />} label="Meal menu check" />
             <TrustChip icon={<ShieldCheck className="h-4 w-4" />} label="Inquiry saved to HMS" />
@@ -129,50 +132,50 @@ function HeroBookingPreview({
   const image = room ? roomImage(room) : null;
 
   return (
-    <div className="glass-card overflow-hidden rounded-ui p-3 shadow-deep">
-      <div className="relative overflow-hidden rounded-ui bg-gradient-to-br from-brand-900 via-brand-700 to-signal-cyan p-3 text-white shadow-glow">
+    <div className="glass-card overflow-hidden rounded-ui p-2.5">
+      <div className="relative overflow-hidden rounded-ui bg-gradient-to-br from-brand-900 via-brand-700 to-signal-cyan p-2.5 text-white">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.28),transparent_38%)]" aria-hidden="true" />
-        <div className="relative overflow-hidden rounded-ui border border-white/30 bg-white text-muted-900 shadow-deep">
+        <div className="relative overflow-hidden rounded-ui border border-white/30 bg-white text-muted-900">
           <div className="relative aspect-[16/10] bg-surface-header">
             {image ? (
               <img src={image} alt={room?.room_name || "Featured hostel room"} className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#e9eef4,#f8fafc_45%,#dbeafe)]">
-                <div className="grid h-24 w-24 place-items-center rounded-full bg-white/70 text-brand-700 shadow-lift">
-                  <BedDouble className="h-12 w-12" />
+                <div className="grid h-20 w-20 place-items-center rounded-full bg-white/70 text-brand-700">
+                  <BedDouble className="h-10 w-10" />
                 </div>
               </div>
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-muted-900/78 via-muted-900/12 to-transparent" />
-            <div className="absolute left-4 right-4 top-4 flex items-start justify-between gap-3">
-              <span className="rounded-full bg-white/92 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-brand-800 shadow-crisp backdrop-blur">
+            <div className="absolute left-3 right-3 top-3 flex items-start justify-between gap-2.5">
+              <span className="rounded-full bg-white/92 px-2.5 py-1 text-[0.7rem] font-black uppercase tracking-[0.14em] text-brand-800 backdrop-blur">
                 {room ? room.tenant_name : "Live availability"}
               </span>
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 shadow-crisp">
+              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[0.7rem] font-black text-emerald-700">
                 {room ? `${room.vacant_beds} beds vacant` : `${stats.vacantBeds} beds vacant`}
               </span>
             </div>
-            <div className="absolute bottom-4 left-4 right-4">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-white/80">
+            <div className="absolute bottom-3 left-3 right-3">
+              <p className="text-[0.7rem] font-black uppercase tracking-[0.16em] text-white/80">
                 {room?.block_name || "Student hostel room"}
               </p>
-              <h2 className="mt-1 line-clamp-2 text-2xl font-black leading-tight text-white">
+              <h2 className="mt-1 line-clamp-2 text-xl font-black leading-tight text-white">
                 {room?.room_name || "Find an available room before you visit"}
               </h2>
-              <p className="mt-2 text-sm font-semibold text-white/85">
+              <p className="mt-1.5 text-xs font-semibold text-white/85">
                 {room ? `${formatRoomType(room.room_type)} · ${formatRate(room.monthly_rate)}` : "Compare rooms, meals, and mapped blocks"}
               </p>
             </div>
           </div>
 
-          <div className="grid gap-3 p-4 sm:grid-cols-3">
+          <div className="grid gap-2.5 p-3 sm:grid-cols-3">
             <PreviewFact icon={<BedDouble className="h-4 w-4" />} label="Rooms" value={stats.availableRooms} detail="listed" />
             <PreviewFact icon={<Utensils className="h-4 w-4" />} label="Meals" value={stats.publishedMealMenus} detail={mealMenu?.menu ? "published" : "menus"} />
             <PreviewFact icon={<Navigation className="h-4 w-4" />} label="Maps" value={stats.mappedHostels} detail={location ? "blocks" : "ready"} />
           </div>
 
-          <div className="border-t border-border bg-surface-subtle p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
+          <div className="border-t border-border bg-surface-subtle p-3">
+            <div className="grid gap-2.5 sm:grid-cols-2">
               <SignalPill icon={<CheckCircle2 className="h-4 w-4" />} label={mealMenu?.menu ? "Meal menu available" : "Meal menu appears when published"} />
               <SignalPill icon={<MapPin className="h-4 w-4" />} label={location?.tenant_name || "Mapped hostels appear here"} />
             </div>
@@ -185,8 +188,8 @@ function HeroBookingPreview({
 
 function TrustChip({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <div className="glass-card flex items-center gap-2 rounded-ui px-3 py-3 text-sm font-bold text-muted-800">
-      <span className="grid h-8 w-8 place-items-center rounded-ui bg-brand-50 text-brand-700">{icon}</span>
+    <div className="glass-card flex items-center gap-2 rounded-ui px-2.5 py-2.5 text-xs font-bold text-muted-800">
+      <span className="grid h-7 w-7 place-items-center rounded-ui bg-brand-50 text-brand-700">{icon}</span>
       <span>{label}</span>
     </div>
   );
@@ -204,20 +207,20 @@ function PreviewFact({
   detail: string;
 }) {
   return (
-    <div className="rounded-ui bg-surface-page p-3">
+    <div className="rounded-ui bg-surface-page p-2.5">
       <div className="flex items-center gap-2 text-brand-700">
         {icon}
-        <span className="text-xs font-black uppercase tracking-[0.12em] text-muted-500">{label}</span>
+        <span className="text-[0.7rem] font-black uppercase tracking-[0.12em] text-muted-500">{label}</span>
       </div>
-      <p className="mt-2 text-2xl font-black text-muted-900">{value}</p>
-      <p className="text-xs font-bold text-muted-500">{detail}</p>
+      <p className="mt-1.5 text-xl font-black text-muted-900">{value}</p>
+      <p className="text-[0.7rem] font-bold text-muted-500">{detail}</p>
     </div>
   );
 }
 
 function SignalPill({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-ui bg-white px-3 py-2 text-sm font-bold text-muted-700 shadow-crisp">
+    <div className="flex min-w-0 items-center gap-2 rounded-ui bg-white px-2.5 py-1.5 text-xs font-bold text-muted-700">
       <span className="shrink-0 text-brand-700">{icon}</span>
       <span className="truncate">{label}</span>
     </div>
@@ -275,14 +278,14 @@ function FacilitiesSection() {
       title="Everything students check before choosing a hostel."
       description="Keep the page focused on what matters first: room fit, food, study comfort, and location confidence."
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {facilities.map((item) => (
-          <article key={item.title} className="premium-card rounded-ui p-5 transition duration-200 hover:-translate-y-1 hover:shadow-lift">
-            <div className="flex h-11 w-11 items-center justify-center rounded-ui bg-brand-50 text-brand-700 ring-1 ring-brand-100">
+          <article key={item.title} className="premium-card rounded-ui p-4 transition duration-200 hover:-translate-y-1">
+            <div className="flex h-9 w-9 items-center justify-center rounded-ui bg-brand-50 text-brand-700 ring-1 ring-brand-100">
               {item.icon}
             </div>
-            <h3 className="mt-4 text-lg font-black text-muted-900">{item.title}</h3>
-            <p className="mt-2 text-sm leading-6 text-muted-600">{item.description}</p>
+            <h3 className="mt-3 text-base font-black text-muted-900">{item.title}</h3>
+            <p className="mt-1.5 text-sm leading-6 text-muted-600">{item.description}</p>
           </article>
         ))}
       </div>
@@ -298,35 +301,35 @@ function LocationSection({
   stats: PublicStats;
 }) {
   return (
-    <section id="location" className="scroll-mt-24 border-b border-white/70 bg-surface-page">
-      <div className="container-grid py-16 sm:py-20 lg:py-24">
-        <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-stretch">
+    <section id="location" className="scroll-mt-24 border-b border-brand-100/80 bg-surface-page">
+      <div className="container-grid py-12 sm:py-16 lg:py-20">
+        <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-stretch">
           <div className="flex flex-col justify-center">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-700">GPS location</p>
-            <h2 className="mt-3 text-2xl font-black leading-tight text-muted-900 sm:text-4xl">
+            <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-brand-700">GPS location</p>
+            <h2 className="mt-2 text-xl font-black leading-tight text-muted-900 sm:text-3xl">
               See hostel blocks before you visit.
             </h2>
-            <p className="mt-4 text-base leading-7 text-muted-600">
+            <p className="mt-3 text-sm leading-6 text-muted-600">
               Search mapped hostel blocks and jump from location to available rooms when beds are open.
             </p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
               <LocationFact icon={<MapPin className="h-4 w-4" />} label="Mapped blocks" value={stats.mappedHostels} />
               <LocationFact icon={<BedDouble className="h-4 w-4" />} label="Vacant beds" value={stats.vacantBeds} />
             </div>
           </div>
 
-          <div className="glass-card min-h-[440px] overflow-hidden rounded-ui p-2">
+          <div className="glass-card min-h-[352px] overflow-hidden rounded-ui p-2">
             {locations.length > 0 ? (
-              <div className="min-h-[440px] overflow-hidden rounded-ui">
+              <div className="min-h-[352px] overflow-hidden rounded-ui">
                 <PublicLocationMap locations={locations} />
               </div>
             ) : (
-              <div className="flex min-h-[440px] flex-col items-center justify-center rounded-ui bg-[linear-gradient(135deg,#f8fafc,#eef3f8)] px-6 text-center">
-                <span className="grid h-16 w-16 place-items-center rounded-full bg-white text-brand-700 shadow-lift">
-                  <MapPin className="h-8 w-8" />
+              <div className="flex min-h-[352px] flex-col items-center justify-center rounded-ui bg-[linear-gradient(135deg,#f8fafc,#eef3f8)] px-5 text-center">
+                <span className="grid h-12 w-12 place-items-center rounded-full bg-white text-brand-700">
+                  <MapPin className="h-6 w-6" />
                 </span>
-                <p className="mt-4 text-lg font-black text-muted-900">No mapped hostel locations yet.</p>
-                <p className="mt-2 max-w-md text-sm leading-6 text-muted-600">
+                <p className="mt-3 text-base font-black text-muted-900">No mapped hostel locations yet.</p>
+                <p className="mt-1.5 max-w-md text-sm leading-6 text-muted-600">
                   Add latitude and longitude to hostel blocks in HMS to show GPS locations here.
                 </p>
               </div>
@@ -348,12 +351,12 @@ function LocationFact({
   value: number;
 }) {
   return (
-    <div className="premium-card rounded-ui p-4">
+    <div className="premium-card rounded-ui p-3">
       <div className="flex items-center gap-2 text-brand-700">
         {icon}
-        <span className="text-sm font-black text-muted-900">{label}</span>
+        <span className="text-xs font-black text-muted-900">{label}</span>
       </div>
-      <p className="mt-2 text-3xl font-black text-muted-900">{value}</p>
+      <p className="mt-1.5 text-2xl font-black text-muted-900">{value}</p>
     </div>
   );
 }

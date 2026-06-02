@@ -1,7 +1,7 @@
 "use client";
 
-import { MapPin, Search } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Search } from "lucide-react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { CircleMarker, LayerGroup, Map as LeafletMap } from "leaflet";
 import type { PublicLocation } from "@/lib/booking";
 
@@ -21,16 +21,14 @@ type LeafletModule = typeof import("leaflet");
 export function PublicLocationMap({ locations }: PublicLocationMapProps) {
   const mappedLocations = useMemo(() => locations.filter(hasMappedLocation), [locations]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedLocationKey, setSelectedLocationKey] = useState<string | null>(() =>
-    mappedLocations[0] ? getLocationKey(mappedLocations[0]) : null,
-  );
+  const [selectedLocationKey, setSelectedLocationKey] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
   const mapElementRef = useRef<HTMLDivElement | null>(null);
   const leafletRef = useRef<LeafletModule | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markerLayerRef = useRef<LayerGroup | null>(null);
   const markerRefs = useRef(new Map<string, CircleMarker>());
   const locationsRef = useRef(mappedLocations);
-  const selectedLocationKeyRef = useRef<string | null>(selectedLocationKey);
 
   const filteredLocations = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -44,22 +42,14 @@ export function PublicLocationMap({ locations }: PublicLocationMapProps) {
   }, [mappedLocations, searchQuery]);
 
   locationsRef.current = mappedLocations;
-  selectedLocationKeyRef.current = selectedLocationKey;
 
   useEffect(() => {
-    if (mappedLocations.length === 0) {
-      if (selectedLocationKey !== null) {
-        setSelectedLocationKey(null);
-      }
-      return;
-    }
-
     const hasSelectedLocation =
       selectedLocationKey !== null &&
       mappedLocations.some((item) => getLocationKey(item) === selectedLocationKey);
 
-    if (!hasSelectedLocation) {
-      setSelectedLocationKey(getLocationKey(mappedLocations[0]));
+    if (selectedLocationKey !== null && !hasSelectedLocation) {
+      setSelectedLocationKey(null);
     }
   }, [mappedLocations, selectedLocationKey]);
 
@@ -90,7 +80,7 @@ export function PublicLocationMap({ locations }: PublicLocationMapProps) {
       leafletRef.current = L;
       mapRef.current = map;
       markerLayerRef.current = markerLayer;
-      updateMapLocations(L, markerLayer, markerRefs.current, locationsRef.current);
+      updateMapLocations(L, markerLayer, markerRefs.current, filteredLocations, handleMarkerClick);
 
       resizeFrame = window.requestAnimationFrame(() => {
         map.invalidateSize();
@@ -119,26 +109,15 @@ export function PublicLocationMap({ locations }: PublicLocationMapProps) {
     const markerLayer = markerLayerRef.current;
     if (!L || !map || !markerLayer) return;
 
-    updateMapLocations(L, markerLayer, markerRefs.current, mappedLocations);
+    updateMapLocations(L, markerLayer, markerRefs.current, filteredLocations, handleMarkerClick);
 
     const resizeFrame = window.requestAnimationFrame(() => {
       map.invalidateSize();
-
-      const selectedLocation = getLocationByKey(mappedLocations, selectedLocationKey);
-      if (selectedLocation) {
-        focusLocation(
-          selectedLocation,
-          markerRefs.current.get(getLocationKey(selectedLocation)),
-          map,
-          { animate: false },
-        );
-      } else {
-        fitLocationOverview(map, mappedLocations);
-      }
+      fitLocationOverview(map, filteredLocations);
     });
 
     return () => window.cancelAnimationFrame(resizeFrame);
-  }, [mappedLocations, selectedLocationKey]);
+  }, [filteredLocations]);
 
   useEffect(() => {
     if (!selectedLocationKey) return;
@@ -154,91 +133,58 @@ export function PublicLocationMap({ locations }: PublicLocationMapProps) {
     }
   }, [mappedLocations, selectedLocationKey]);
 
-  function handleSelectLocation(location: PublicLocation) {
-    const key = getLocationKey(location);
-    setSelectedLocationKey(key);
-    focusLocation(location, markerRefs.current.get(key), mapRef.current);
+  function handleMarkerClick(location: PublicLocation) {
+    setSelectedLocationKey(getLocationKey(location));
   }
 
   function focusInitialLocation(map: LeafletMap) {
-    const selectedLocation =
-      getLocationByKey(locationsRef.current, selectedLocationKeyRef.current) ??
-      locationsRef.current[0];
+    fitLocationOverview(map, locationsRef.current);
+  }
 
-    if (!selectedLocation) {
-      fitLocationOverview(map, locationsRef.current);
-      return;
-    }
+  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setHasSearched(true);
 
-    const key = getLocationKey(selectedLocation);
-    if (selectedLocationKeyRef.current !== key) {
-      selectedLocationKeyRef.current = key;
-      setSelectedLocationKey(key);
-    }
+    const firstMatch = filteredLocations[0];
+    if (!firstMatch) return;
 
-    focusLocation(selectedLocation, markerRefs.current.get(key), map, {
-      animate: false,
-      popupDelay: 350,
+    const key = getLocationKey(firstMatch);
+    setSelectedLocationKey(key);
+    focusLocation(firstMatch, markerRefs.current.get(key), mapRef.current, {
+      popupDelay: 0,
     });
   }
 
   return (
-    <div className="relative h-full min-h-[420px] w-full">
-      <div
-        className="absolute left-3 top-3 z-[1000] w-[min(22rem,calc(100%-1.5rem))] rounded-ui border border-white/80 bg-white/94 shadow-deep backdrop-blur"
+    <div className="relative h-full min-h-[336px] w-full">
+      <form
+        onSubmit={handleSearchSubmit}
+        className="absolute left-3 top-3 z-[1000] w-[min(22rem,calc(100%-1.5rem))] rounded-ui border border-white/80 bg-white/94 backdrop-blur"
         onMouseDown={(event) => event.stopPropagation()}
         onTouchStart={(event) => event.stopPropagation()}
       >
         <label className="flex h-11 items-center gap-2 px-3" aria-label="Search hostel blocks">
-          <Search className="h-4 w-4 shrink-0 text-muted-500" />
+          <button type="submit" className="shrink-0" aria-label="Search hostel">
+            <Search className="h-4 w-4 text-muted-500" />
+          </button>
           <input
             type="search"
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              setHasSearched(false);
+            }}
             placeholder="Search hostel blocks"
             className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-muted-900 outline-none placeholder:text-muted-500"
           />
         </label>
-
-        <div className="max-h-64 overflow-y-auto border-t border-border">
-          {filteredLocations.length > 0 ? (
-            filteredLocations.map((item) => {
-              const key = getLocationKey(item);
-              const isSelected = key === selectedLocationKey;
-
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleSelectLocation(item)}
-                  className={`flex w-full items-start gap-2 px-3 py-2 text-left transition ${
-                    isSelected ? "bg-brand-50 text-brand-900" : "hover:bg-surface-subtle"
-                  }`}
-                >
-                  <MapPin
-                    className={`mt-0.5 h-4 w-4 shrink-0 ${
-                      isSelected ? "text-brand-700" : "text-muted-500"
-                    }`}
-                  />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-bold text-muted-900">
-                      {item.tenant_name}
-                    </span>
-                    <span className="block truncate text-xs font-semibold text-muted-600">
-                      {item.block_name || "Block"}
-                    </span>
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <p className="px-3 py-4 text-sm font-semibold text-muted-500">
-              No mapped hostel blocks found.
-            </p>
-          )}
-        </div>
-      </div>
-      <div ref={mapElementRef} className="h-full min-h-[420px] w-full" />
+        {hasSearched && searchQuery.trim() && filteredLocations.length === 0 ? (
+          <p className="border-t border-border px-3 py-2 text-xs font-semibold text-muted-500">
+            No mapped hostel found.
+          </p>
+        ) : null}
+      </form>
+      <div ref={mapElementRef} className="h-full min-h-[336px] w-full" />
     </div>
   );
 }
@@ -252,6 +198,7 @@ function updateMapLocations(
   markerLayer: LayerGroup,
   markers: Map<string, CircleMarker>,
   locations: PublicLocation[],
+  onMarkerClick: (location: PublicLocation) => void,
 ) {
   markerLayer.clearLayers();
   markers.clear();
@@ -264,7 +211,15 @@ function updateMapLocations(
       radius: 10,
       weight: 2,
     })
-      .bindPopup(createPopupContent(item))
+      .bindPopup(createHostelNamePopup(item))
+      .bindTooltip(item.tenant_name, {
+        className: "hostel-map-label",
+        direction: "top",
+        offset: [0, -12],
+        opacity: 1,
+        permanent: true,
+      })
+      .on("click", () => onMarkerClick(item))
       .addTo(markerLayer);
 
     markers.set(getLocationKey(item), marker);
@@ -302,14 +257,6 @@ function getLocationKey(item: PublicLocation): string {
   return `${item.tenant_slug}:${item.block_id}`;
 }
 
-function getLocationByKey(
-  locations: PublicLocation[],
-  key: string | null,
-): PublicLocation | undefined {
-  if (!key) return undefined;
-  return locations.find((item) => getLocationKey(item) === key);
-}
-
 function hasMappedLocation(item: PublicLocation): boolean {
   return (
     Number.isFinite(item.latitude) &&
@@ -317,44 +264,15 @@ function hasMappedLocation(item: PublicLocation): boolean {
   );
 }
 
-function createPopupContent(item: PublicLocation): HTMLDivElement {
+function createHostelNamePopup(item: PublicLocation): HTMLDivElement {
   const wrapper = document.createElement("div");
-  wrapper.className = "min-w-[210px] space-y-2";
+  wrapper.className = "min-w-[120px]";
 
-  const heading = document.createElement("div");
   const tenantName = document.createElement("p");
   tenantName.className = "text-sm font-bold text-slate-900";
   tenantName.textContent = item.tenant_name;
 
-  const blockName = document.createElement("p");
-  blockName.className = "text-xs font-semibold text-slate-600";
-  blockName.textContent = item.block_name || "Block";
-
-  heading.append(tenantName, blockName);
-  wrapper.append(heading);
-
-  const stats = document.createElement("div");
-  stats.className = "grid grid-cols-2 gap-2 text-xs";
-
-  const rooms = document.createElement("span");
-  rooms.className = "rounded-md bg-slate-100 px-2 py-1 font-semibold text-slate-700";
-  rooms.textContent = `${item.available_rooms_count} rooms`;
-
-  const beds = document.createElement("span");
-  beds.className = "rounded-md bg-emerald-50 px-2 py-1 font-semibold text-emerald-700";
-  beds.textContent = `${item.vacant_beds} beds`;
-
-  stats.append(rooms, beds);
-  wrapper.append(stats);
-
-  if (item.available_rooms_count > 0) {
-    const link = document.createElement("a");
-    link.href = "#available-rooms";
-    link.className =
-      "inline-flex h-8 items-center rounded-md bg-[#235999] px-3 text-xs font-bold text-white hover:bg-[#1d4b82]";
-    link.textContent = "View rooms";
-    wrapper.append(link);
-  }
+  wrapper.append(tenantName);
 
   return wrapper;
 }

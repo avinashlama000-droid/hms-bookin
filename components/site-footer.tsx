@@ -14,7 +14,7 @@ export function SiteFooter() {
       <div className="container-grid grid gap-8 py-12 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
         <div>
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-700 text-white shadow-crisp">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-700 text-white">
               <Building2 className="h-5 w-5" />
             </span>
             <div>

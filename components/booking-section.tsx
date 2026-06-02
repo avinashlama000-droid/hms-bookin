@@ -12,6 +12,7 @@ import {
   type PublicMealMenu,
   type PublicMealMenuContent,
 } from "@/lib/booking";
+import { type BookingSearchIntent, useBookingSearch } from "./booking-search-context";
 
 type BookingSectionProps = {
   rooms: AvailableRoom[];
@@ -77,6 +78,7 @@ export function BookingSection({
   variant = "full",
   showMealMenuPanel = true,
 }: BookingSectionProps) {
+  const bookingSearch = useBookingSearch();
   const [search, setSearch] = useState("");
   const [tenant, setTenant] = useState("all");
   const [roomType, setRoomType] = useState("all");
@@ -87,7 +89,17 @@ export function BookingSection({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [compactRoomIndex, setCompactRoomIndex] = useState(0);
+  const [isRoomsMarqueePaused, setIsRoomsMarqueePaused] = useState(false);
   const compactRoomsRef = useRef<HTMLDivElement>(null);
+  const roomsMarqueeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!bookingSearch) return;
+
+    const intent = bookingSearch.intent;
+    setSearch(intent.destinationSearch);
+    setTenant(intent.tenantSlug || "all");
+  }, [bookingSearch?.appliedVersion]);
 
   const tenantOptions = useMemo(() => {
     const options = new Map<string, string>();
@@ -136,6 +148,42 @@ export function BookingSection({
     setCompactRoomIndex((current) => Math.min(current, Math.max(filteredRooms.length - 1, 0)));
   }, [filteredRooms.length]);
 
+  useEffect(() => {
+    const viewport = roomsMarqueeRef.current;
+    if (!viewport || filteredRooms.length <= 1 || isRoomsMarqueePaused) return;
+
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) return;
+
+    let frame = 0;
+    let previousTime = 0;
+    const pixelsPerSecond = 34;
+
+    const animate = (time: number) => {
+      if (!previousTime) {
+        previousTime = time;
+      }
+
+      const duplicateStart = viewport.querySelectorAll<HTMLElement>(".rooms-marquee__card").item(filteredRooms.length)?.offsetLeft ?? 0;
+      const elapsedSeconds = (time - previousTime) / 1000;
+      previousTime = time;
+
+      if (duplicateStart > 0 && document.visibilityState === "visible") {
+        viewport.scrollLeft += pixelsPerSecond * elapsedSeconds;
+
+        if (viewport.scrollLeft >= duplicateStart) {
+          viewport.scrollLeft -= duplicateStart;
+        }
+      }
+
+      frame = window.requestAnimationFrame(animate);
+    };
+
+    frame = window.requestAnimationFrame(animate);
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [filteredRooms.length, isRoomsMarqueePaused]);
+
   const visibleRoomMenuKeys = useMemo(
     () => new Set(filteredRooms.map((room) => blockMenuKey(room))),
     [filteredRooms],
@@ -159,6 +207,7 @@ export function BookingSection({
   const hasActiveFilters = Boolean(search.trim()) || tenant !== "all" || roomType !== "all";
   const activeCompactRoom = filteredRooms[compactRoomIndex] ?? null;
   const activeCompactMealMenu = activeCompactRoom ? menuByBlock.get(blockMenuKey(activeCompactRoom)) : undefined;
+  const rollingRooms = filteredRooms.length > 1 ? [...filteredRooms, ...filteredRooms] : filteredRooms;
 
   function openBooking(room: AvailableRoom) {
     setSelectedRoom(room);
@@ -204,6 +253,30 @@ export function BookingSection({
     });
   }
 
+  function scrollRoomsMarquee(direction: "left" | "right", shouldLoop = false) {
+    const viewport = roomsMarqueeRef.current;
+    if (!viewport) return;
+
+    const cards = Array.from(viewport.querySelectorAll<HTMLElement>(".rooms-marquee__card")).slice(0, filteredRooms.length);
+    if (cards.length === 0) return;
+
+    const cardStarts = cards.map((card) => card.offsetLeft);
+    const currentIndex = cardStarts.reduce((closestIndex, cardStart, index) => {
+      const closestDistance = Math.abs(cardStarts[closestIndex] - viewport.scrollLeft);
+      const cardDistance = Math.abs(cardStart - viewport.scrollLeft);
+
+      return cardDistance < closestDistance ? index : closestIndex;
+    }, 0);
+    const targetIndex = shouldLoop
+      ? (direction === "left" ? currentIndex - 1 + cards.length : currentIndex + 1) % cards.length
+      : Math.max(0, Math.min(direction === "left" ? currentIndex - 1 : currentIndex + 1, cards.length - 1));
+
+    viewport.scrollTo({
+      left: cardStarts[targetIndex],
+      behavior: "smooth",
+    });
+  }
+
   async function submitBooking(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedRoom) return;
@@ -216,6 +289,7 @@ export function BookingSection({
       email: form.email.trim(),
       phone: form.phone.trim(),
       description: form.description.trim() || undefined,
+      ...bookingIntentPayload(bookingSearch?.intent),
     };
 
     setIsSubmitting(true);
@@ -239,7 +313,7 @@ export function BookingSection({
 
   if (variant === "compact") {
     return (
-      <div className="flex min-h-0 flex-col rounded-lg border border-border bg-white p-3 shadow-soft sm:p-4 lg:min-h-[620px]">
+      <div className="flex min-h-0 flex-col rounded-lg border border-border bg-white p-3 sm:p-4 lg:min-h-[620px]">
         <div className="mb-3 flex items-start justify-between gap-3 border-b border-border pb-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-normal text-brand-700">
@@ -278,7 +352,7 @@ export function BookingSection({
             <button
               type="button"
               onClick={() => scrollCompactRooms("left")}
-              className="absolute left-0 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-white text-brand-700 shadow-soft transition hover:bg-brand-50 sm:flex"
+              className="absolute left-0 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-white text-brand-700 transition hover:bg-brand-50 sm:flex"
               aria-label="Scroll rooms left"
             >
               <ChevronLeft className="h-5 w-5" />
@@ -286,7 +360,7 @@ export function BookingSection({
             <button
               type="button"
               onClick={() => scrollCompactRooms("right")}
-              className="absolute right-0 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-white text-brand-700 shadow-soft transition hover:bg-brand-50 sm:flex"
+              className="absolute right-0 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg border border-border bg-white text-brand-700 transition hover:bg-brand-50 sm:flex"
               aria-label="Scroll rooms right"
             >
               <ChevronRight className="h-5 w-5" />
@@ -307,6 +381,7 @@ export function BookingSection({
             error={error}
             success={success}
             isSubmitting={isSubmitting}
+            bookingIntent={bookingSearch?.intent ?? null}
             onClose={() => setSelectedRoom(null)}
             onSubmit={submitBooking}
           />
@@ -320,12 +395,12 @@ export function BookingSection({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="glass-card sticky top-[4.75rem] z-30 rounded-ui p-3">
-        <div className="mb-3 flex flex-col gap-2 border-b border-white/70 pb-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-5">
+      <div className="glass-card sticky top-[4.75rem] z-30 rounded-ui p-2.5">
+        <div className="mb-2.5 flex flex-col gap-2 border-b border-white/70 pb-2.5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-700">Room finder</p>
-            <p className="mt-1 text-sm font-bold text-muted-700">
+            <p className="text-[0.7rem] font-black uppercase tracking-[0.16em] text-brand-700">Room finder</p>
+            <p className="mt-1 text-xs font-bold text-muted-700">
               {filteredRooms.length} of {rooms.length} rooms match your search
             </p>
           </div>
@@ -337,7 +412,7 @@ export function BookingSection({
                 setTenant("all");
                 setRoomType("all");
               }}
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-ui border border-brand-100 bg-white px-3 text-sm font-bold text-brand-700 transition hover:bg-brand-50"
+              className="inline-flex h-8 items-center justify-center gap-2 rounded-ui border border-brand-100 bg-white px-2.5 text-xs font-bold text-brand-700 transition hover:bg-brand-50"
             >
               <X className="h-4 w-4" />
               Reset filters
@@ -345,7 +420,7 @@ export function BookingSection({
           ) : null}
         </div>
 
-        <div className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_190px_190px]">
+        <div className="grid gap-2.5 lg:grid-cols-[minmax(220px,1fr)_170px_170px]">
         <label className="relative block">
           <span className="sr-only">Search rooms</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-400" />
@@ -353,7 +428,7 @@ export function BookingSection({
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search by hostel, block, room, or location"
-            className="h-11 w-full rounded-ui border border-white/80 bg-white pl-10 pr-3 text-sm font-bold text-muted-900 shadow-crisp outline-none transition placeholder:text-muted-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="h-9 w-full rounded-ui border border-white/80 bg-white pl-10 pr-3 text-sm font-bold text-muted-900 outline-none transition placeholder:text-muted-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </label>
         <label className="relative block">
@@ -362,7 +437,7 @@ export function BookingSection({
           <select
             value={tenant}
             onChange={(event) => setTenant(event.target.value)}
-            className="h-11 w-full appearance-none rounded-ui border border-white/80 bg-white pl-10 pr-3 text-sm font-bold text-muted-800 shadow-crisp outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="h-9 w-full appearance-none rounded-ui border border-white/80 bg-white pl-10 pr-3 text-sm font-bold text-muted-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           >
             <option value="all">All hostels</option>
             {tenantOptions.map(([slug, name]) => (
@@ -378,7 +453,7 @@ export function BookingSection({
           <select
             value={roomType}
             onChange={(event) => setRoomType(event.target.value)}
-            className="h-11 w-full appearance-none rounded-ui border border-white/80 bg-white pl-10 pr-3 text-sm font-bold text-muted-800 shadow-crisp outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="h-9 w-full appearance-none rounded-ui border border-white/80 bg-white pl-10 pr-3 text-sm font-bold text-muted-800 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           >
             <option value="all">All types</option>
             {roomTypes.map((type) => (
@@ -396,24 +471,50 @@ export function BookingSection({
       )}
 
       {filteredRooms.length > 0 ? (
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {filteredRooms.map((room) => (
-            <RoomCard
-              key={`${room.tenant_slug}-${room.room_id}`}
-              room={room}
-              mealMenu={menuByBlock.get(blockMenuKey(room))}
-              onBook={openBooking}
-              onViewMenu={setSelectedMealMenu}
-            />
-          ))}
+        <div
+          className="rooms-marquee"
+          aria-label="Available rooms carousel"
+          onFocus={() => setIsRoomsMarqueePaused(true)}
+          onBlur={() => setIsRoomsMarqueePaused(false)}
+        >
+          <button
+            type="button"
+            onClick={() => scrollRoomsMarquee("left")}
+            className="rooms-marquee__control rooms-marquee__control--left"
+            aria-label="Scroll rooms left"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <div ref={roomsMarqueeRef} className="rooms-marquee__viewport">
+            <div className="rooms-marquee__track">
+              {rollingRooms.map((room, index) => (
+                <RoomCard
+                  key={`${room.tenant_slug}-${room.room_id}-${index}`}
+                  room={room}
+                  mealMenu={menuByBlock.get(blockMenuKey(room))}
+                  onBook={openBooking}
+                  onViewMenu={setSelectedMealMenu}
+                  ariaHidden={index >= filteredRooms.length}
+                />
+              ))}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => scrollRoomsMarquee("right")}
+            className="rooms-marquee__control rooms-marquee__control--right"
+            aria-label="Scroll rooms right"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
       ) : (
-        <div className="glass-card rounded-ui px-5 py-12 text-center">
-          <span className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-brand-50 text-brand-700 shadow-lift">
-            <BedDouble className="h-8 w-8" />
+        <div className="glass-card rounded-ui px-4 py-10 text-center">
+          <span className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-brand-50 text-brand-700">
+            <BedDouble className="h-7 w-7" />
           </span>
-          <p className="mt-4 text-lg font-black text-muted-900">No available rooms found</p>
-          <p className="mt-2 text-sm leading-6 text-muted-600">
+          <p className="mt-3 text-base font-black text-muted-900">No available rooms found</p>
+          <p className="mt-1.5 text-sm leading-6 text-muted-600">
             Try a different hostel, room type, or search term.
           </p>
         </div>
@@ -427,6 +528,7 @@ export function BookingSection({
           error={error}
           success={success}
           isSubmitting={isSubmitting}
+          bookingIntent={bookingSearch?.intent ?? null}
           onClose={() => setSelectedRoom(null)}
           onSubmit={submitBooking}
         />
@@ -450,7 +552,7 @@ function MealMenuPanel({
 }) {
   if (menus.length === 0) {
     return (
-      <div className="rounded-ui border border-dashed border-brand-100 bg-white/80 px-4 py-5 text-center shadow-crisp">
+      <div className="rounded-ui border border-dashed border-brand-100 bg-white/80 px-4 py-5 text-center">
         <Utensils className="mx-auto h-6 w-6 text-brand-300" />
         <p className="mt-2 text-sm font-black text-muted-900">No published meal menus found</p>
       </div>
@@ -458,14 +560,14 @@ function MealMenuPanel({
   }
 
   return (
-    <section className={compact ? "mb-3" : "space-y-3"}>
-      <div className="flex items-center justify-between gap-3">
+    <section className={compact ? "mb-3" : "space-y-2.5"}>
+      <div className="flex items-center justify-between gap-2.5">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-700">
+          <p className="text-[0.7rem] font-black uppercase tracking-[0.16em] text-brand-700">
             Published meal menus
           </p>
           {!compact ? (
-            <h2 className="mt-1 text-lg font-bold text-muted-900">By hostel block</h2>
+            <h2 className="mt-1 text-base font-bold text-muted-900">By hostel block</h2>
           ) : null}
         </div>
         <span className="rounded-lg bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-700">
@@ -473,14 +575,14 @@ function MealMenuPanel({
         </span>
       </div>
 
-      <div className={compact ? "flex gap-2 overflow-x-auto pb-1" : "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"}>
+      <div className={compact ? "flex gap-2 overflow-x-auto pb-1" : "grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3"}>
         {menus.map((menu) => (
           <button
             key={blockMenuKey(menu)}
             type="button"
             onClick={() => onViewMenu(menu)}
-          className={`min-w-0 rounded-ui border border-white/80 bg-white text-left shadow-crisp transition hover:border-brand-200 hover:bg-brand-50 hover:shadow-soft ${
-            compact ? "w-56 shrink-0 px-3 py-2" : "px-4 py-3"
+          className={`min-w-0 rounded-ui border border-white/80 bg-white text-left transition hover:border-brand-200 hover:bg-brand-50 ${
+            compact ? "w-56 shrink-0 px-3 py-2" : "px-3 py-2.5"
           }`}
           >
             <span className="flex items-start gap-2">
@@ -518,7 +620,7 @@ function CompactRoomRow({
   const image = roomImage(room);
 
   return (
-    <article className="flex min-h-full w-full min-w-full shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-border bg-white shadow-sm">
+    <article className="flex min-h-full w-full min-w-full shrink-0 snap-start flex-col overflow-hidden rounded-lg border border-border bg-white">
       <div className="relative h-60 overflow-hidden bg-surface-header">
         {image ? (
           <img src={image} alt={room.room_name} className="h-full w-full object-contain" />
@@ -532,13 +634,13 @@ function CompactRoomRow({
         ) : null}
         <div className="absolute left-4 right-4 top-4 flex items-start justify-between gap-3">
           <p
-            className={`min-w-0 truncate rounded-lg px-2.5 py-1 text-xs font-bold uppercase tracking-normal shadow-sm ${
+            className={`min-w-0 truncate rounded-lg px-2.5 py-1 text-xs font-bold uppercase tracking-normal ${
               image ? "bg-white/90 text-brand-700 backdrop-blur-sm" : "bg-white text-brand-700"
             }`}
           >
             {room.tenant_name}
           </p>
-          <span className="shrink-0 rounded-lg bg-status-successSoft px-2 py-1 text-xs font-bold text-status-success shadow-sm">
+          <span className="shrink-0 rounded-lg bg-status-successSoft px-2 py-1 text-xs font-bold text-status-success">
             {room.vacant_beds} vacant
           </span>
         </div>
@@ -572,7 +674,7 @@ function CompactRoomRow({
           <button
             type="button"
             onClick={() => onBook(room)}
-            className="h-11 w-full rounded-lg bg-brand-600 px-4 text-sm font-bold text-white transition hover:bg-brand-700"
+            className="h-11 w-full rounded-lg bg-brand-800 px-4 text-sm font-bold text-white transition hover:bg-brand-900"
           >
             Book now
           </button>
@@ -598,6 +700,7 @@ function BookingDialog({
   error,
   success,
   isSubmitting,
+  bookingIntent,
   onClose,
   onSubmit,
 }: {
@@ -607,12 +710,15 @@ function BookingDialog({
   error: string;
   success: string;
   isSubmitting: boolean;
+  bookingIntent: BookingSearchIntent | null;
   onClose: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const intentSummary = bookingIntentSummary(bookingIntent);
+
   return (
     <div className="fixed inset-0 z-[70] flex items-end bg-muted-900/50 px-4 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
-      <div className="w-full max-w-lg rounded-ui border border-white/70 bg-white p-5 shadow-deep">
+      <div className="w-full max-w-lg rounded-ui border border-white/70 bg-white p-5">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-brand-700">
@@ -650,6 +756,16 @@ function BookingDialog({
           </div>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
+            <div className="rounded-ui border border-border bg-surface-subtle p-3">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-muted-500">Booking summary</p>
+              <div className="mt-3 grid gap-2 text-sm">
+                <SummaryRow label="Room" value={`${room.room_name} - ${room.block_name || "Block"}`} />
+                <SummaryRow label="Destination" value={intentSummary.destination || room.tenant_name} />
+                <SummaryRow label="When" value={intentSummary.when || "Dates not selected"} />
+                <SummaryRow label="Guests" value={intentSummary.guests || "Guests not added"} />
+                <SummaryRow label="Hold" value={`${room.vacant_beds} beds currently vacant. Reservation is held after submit.`} />
+              </div>
+            </div>
             <FormField
               label="Full name"
               value={form.name}
@@ -689,11 +805,20 @@ function BookingDialog({
               disabled={isSubmitting}
               className="glass-button h-11 w-full rounded-ui px-4 text-sm font-black text-white transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Sending inquiry..." : "Send booking inquiry"}
+              {isSubmitting ? "Reserving room..." : "Reserve room"}
             </button>
           </form>
         )}
       </div>
+    </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="shrink-0 font-black text-muted-500">{label}</span>
+      <span className="min-w-0 text-right font-bold text-muted-900">{value}</span>
     </div>
   );
 }
@@ -705,7 +830,7 @@ function MealMenuDialog({ menu, onClose }: { menu: PublicMealMenu; onClose: () =
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end bg-muted-900/50 px-4 py-4 backdrop-blur-sm sm:items-center sm:justify-center">
-      <div className="max-h-[90svh] w-full max-w-3xl overflow-hidden rounded-ui border border-white/70 bg-white shadow-deep">
+      <div className="max-h-[90svh] w-full max-w-3xl overflow-hidden rounded-ui border border-white/70 bg-white">
         <div className="flex items-start justify-between gap-4 border-b border-border p-5">
           <div>
             <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-brand-700">
@@ -803,67 +928,71 @@ function RoomCard({
   mealMenu,
   onBook,
   onViewMenu,
+  ariaHidden = false,
 }: {
   room: AvailableRoom;
   mealMenu?: PublicMealMenu;
   onBook: (room: AvailableRoom) => void;
   onViewMenu: (menu: PublicMealMenu) => void;
+  ariaHidden?: boolean;
 }) {
   const image = roomImage(room);
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-ui border border-white/80 bg-white shadow-soft transition-all duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lift">
-      <div className="relative aspect-[16/10] overflow-hidden bg-surface-header">
+    <article
+      className="rooms-marquee__card group flex h-full flex-col overflow-hidden rounded-ui border border-white/80 bg-white transition-all duration-200 hover:-translate-y-1 hover:border-brand-200"
+      aria-hidden={ariaHidden}
+    >
+      <div className="relative aspect-[16/9] overflow-hidden bg-surface-header">
         {image ? (
           <img src={image} alt={room.room_name} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,#e9eef4,#f8fafc_45%,#dbeafe)]">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-white/70 text-brand-700 shadow-lift">
-              <BedDouble className="h-10 w-10" aria-hidden="true" />
+            <div className="grid h-16 w-16 place-items-center rounded-full bg-white/70 text-brand-700">
+              <BedDouble className="h-8 w-8" aria-hidden="true" />
             </div>
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-muted-900/76 via-muted-900/10 to-transparent" />
-        <span className="absolute right-4 top-4 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 shadow-crisp">
+        <span className="absolute right-3 top-3 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">
           {room.vacant_beds} vacant
         </span>
-        <span className="absolute left-4 top-4 rounded-full bg-white/92 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-brand-800 shadow-crisp backdrop-blur">
+        <span className="absolute left-3 top-3 max-w-[62%] truncate rounded-full bg-white/92 px-2.5 py-1 text-xs font-black uppercase tracking-[0.14em] text-brand-800 backdrop-blur">
           {room.tenant_name}
         </span>
-        <div className="absolute bottom-4 left-4 right-4">
+        <div className="absolute bottom-3 left-3 right-3">
           <p className="truncate text-xs font-black uppercase tracking-[0.14em] text-white/80">
             {room.block_name || "Hostel block"}
           </p>
-          <h3 className="mt-1 truncate text-2xl font-black text-white">{room.room_name}</h3>
+          <h3 className="mt-1 truncate text-xl font-black text-white">{room.room_name}</h3>
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-3">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-sm font-bold text-muted-600">{formatRoomType(room.room_type)}</p>
-          <p className="shrink-0 text-base font-black text-muted-900">{formatRate(room.monthly_rate)}</p>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-muted-900">{formatRoomType(room.room_type)}</p>
+            <p className="mt-0.5 text-xs font-semibold text-muted-500">
+              {room.capacity} beds total
+            </p>
+          </div>
+          <p className="shrink-0 text-sm font-black text-brand-700">{formatRate(room.monthly_rate)}</p>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-          <RoomFact label="Capacity" value={`${room.capacity} beds`} />
-          <RoomFact label="Available" value={`${room.vacant_beds} beds`} />
-          <RoomFact label="Floor" value={room.floor || "Not set"} />
-          <RoomFact label="Meals" value={mealMenu?.menu ? "Published" : "Ask hostel"} />
-        </div>
-
-        <div className="mt-4 flex items-start gap-2 text-sm text-muted-600">
+        <div className="mt-2.5 flex items-start gap-2 text-sm text-muted-600">
           <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-400" />
-          <span className="line-clamp-2">
+          <span className="line-clamp-1">
             {room.block_name || "Block"}
             {room.location ? `, ${room.location}` : ""}
           </span>
         </div>
 
-        <div className="mt-auto grid gap-2 pt-5 sm:grid-cols-2">
+        <div className="mt-auto grid gap-2 pt-3 sm:grid-cols-2">
           <button
             type="button"
             onClick={() => onBook(room)}
-            className="glass-button inline-flex h-11 w-full items-center justify-center gap-2 rounded-ui px-4 text-sm font-black text-white transition hover:brightness-105"
+            tabIndex={ariaHidden ? -1 : undefined}
+            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-ui bg-brand-800 px-3 text-sm font-black text-white transition hover:bg-brand-900"
           >
             Book now
             <ArrowRight className="h-4 w-4" />
@@ -872,7 +1001,8 @@ function RoomCard({
             type="button"
             onClick={() => mealMenu && onViewMenu(mealMenu)}
             disabled={!mealMenu?.menu}
-            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-ui border border-border bg-white px-3 text-sm font-black text-muted-700 transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50"
+            tabIndex={ariaHidden ? -1 : undefined}
+            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-ui border border-border bg-white px-3 text-sm font-black text-muted-700 transition hover:bg-surface-subtle disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Utensils className="h-4 w-4" />
             Meal menu
@@ -893,9 +1023,9 @@ function roomImage(room: AvailableRoom): string | null {
 
 function RoomFact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-ui bg-surface-subtle px-3 py-2 ring-1 ring-border/60">
-      <p className="text-xs font-black uppercase tracking-[0.12em] text-muted-500">{label}</p>
-      <p className="mt-1 truncate font-black text-muted-900">{value}</p>
+    <div className="rounded-ui bg-surface-subtle px-2.5 py-1.5 ring-1 ring-border/60">
+      <p className="text-[0.7rem] font-black uppercase tracking-[0.12em] text-muted-500">{label}</p>
+      <p className="mt-1 truncate text-sm font-black text-muted-900">{value}</p>
     </div>
   );
 }
@@ -925,6 +1055,81 @@ function FormField({
       />
     </label>
   );
+}
+
+function bookingIntentPayload(intent: BookingSearchIntent | null | undefined): Partial<BookingPayload> {
+  if (!intent) return {};
+
+  return {
+    check_in_date: intent.dateMode === "dates" && intent.checkInDate ? intent.checkInDate : undefined,
+    check_out_date: intent.dateMode === "dates" && intent.checkOutDate ? intent.checkOutDate : undefined,
+    flexible_month: intent.dateMode === "flexible" && intent.flexibleMonth ? intent.flexibleMonth : undefined,
+    flexible_stay: intent.dateMode === "flexible" ? intent.flexibleStay : undefined,
+    adults: intent.guests.adults || undefined,
+    children: intent.guests.children || undefined,
+    infants: intent.guests.infants || undefined,
+    pets: intent.guests.pets || undefined,
+  };
+}
+
+function bookingIntentSummary(intent: BookingSearchIntent | null): {
+  destination: string;
+  when: string;
+  guests: string;
+} {
+  if (!intent) {
+    return { destination: "", when: "", guests: "" };
+  }
+
+  return {
+    destination: intent.destinationLabel,
+    when: formatBookingWhen(intent),
+    guests: formatBookingGuests(intent),
+  };
+}
+
+function formatBookingWhen(intent: BookingSearchIntent): string {
+  if (intent.dateMode === "flexible" && intent.flexibleMonth) {
+    return `${intent.flexibleStay} in ${formatMonthKey(intent.flexibleMonth)}`;
+  }
+
+  if (intent.checkInDate && intent.checkOutDate) {
+    return `${formatBookingDate(intent.checkInDate)} - ${formatBookingDate(intent.checkOutDate)}`;
+  }
+
+  if (intent.checkInDate) {
+    return formatBookingDate(intent.checkInDate);
+  }
+
+  return "";
+}
+
+function formatBookingGuests(intent: BookingSearchIntent): string {
+  const people = intent.guests.adults + intent.guests.children;
+  const parts = [];
+
+  if (people > 0) parts.push(`${people} guest${people === 1 ? "" : "s"}`);
+  if (intent.guests.infants > 0) parts.push(`${intent.guests.infants} infant${intent.guests.infants === 1 ? "" : "s"}`);
+  if (intent.guests.pets > 0) parts.push(`${intent.guests.pets} pet${intent.guests.pets === 1 ? "" : "s"}`);
+
+  return parts.join(", ");
+}
+
+function formatBookingDate(value: string): string {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleString("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatMonthKey(value: string): string {
+  const [year, month] = value.split("-").map(Number);
+  return new Date(year, month - 1, 1).toLocaleString("en", {
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function formatRoomType(type: string): string {

@@ -14,7 +14,7 @@ type ButtonProps = {
 const variants: Record<ButtonVariant, string> = {
   primary: "glass-button border text-white hover:brightness-105",
   secondary:
-    "border border-white/70 bg-white/85 text-muted-800 shadow-crisp hover:border-brand-200 hover:bg-white",
+    "border border-white/70 bg-white/85 text-muted-800 hover:border-brand-200 hover:bg-white",
   ghost: "text-muted-700 hover:bg-muted-100",
 };
 

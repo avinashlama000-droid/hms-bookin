@@ -9,7 +9,7 @@ type RoleCardProps = {
 
 export function RoleCard({ role, description, permissions, icon }: RoleCardProps) {
   return (
-    <article className="rounded-lg border border-border bg-white p-5 shadow-sm">
+    <article className="rounded-lg border border-border bg-white p-5">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
           {icon}

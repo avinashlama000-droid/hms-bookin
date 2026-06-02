@@ -56,6 +56,14 @@ export type BookingPayload = {
   email: string;
   phone: string;
   description?: string;
+  check_in_date?: string;
+  check_out_date?: string;
+  flexible_month?: string;
+  flexible_stay?: string;
+  adults?: number;
+  children?: number;
+  infants?: number;
+  pets?: number;
 };
 
 type AvailableRoomsResponse = {

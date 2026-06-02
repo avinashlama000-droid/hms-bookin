@@ -16,7 +16,7 @@ const toneClasses = {
 
 export function MetricCard({ label, value, detail, icon, tone = "brand" }: MetricCardProps) {
   return (
-    <div className="rounded-lg border border-white/70 bg-white/65 p-4 shadow-sm backdrop-blur-sm">
+    <div className="rounded-lg border border-white/70 bg-white/65 p-4 backdrop-blur-sm">
       <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg ${toneClasses[tone]}`}>
         {icon}
       </div>

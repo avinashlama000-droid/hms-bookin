@@ -40,10 +40,10 @@ module.exports = {
           violet: "#6d5dfc",
         },
         surface: {
-          page: "#F6F8FB",
-          card: "#FFFFFF",
-          subtle: "#F8FAFC",
-          header: "#EEF3F8",
+          page: "#EAF0F7",
+          card: "#F9FBFD",
+          subtle: "#F1F5FA",
+          header: "#E1E9F3",
         },
         border: {
           DEFAULT: "#E5EAF0",
@@ -69,13 +69,6 @@ module.exports = {
           danger: "#DC2626",
           dangerSoft: "#FEF2F2",
         },
-      },
-      boxShadow: {
-        crisp: "0 1px 2px rgba(15, 23, 42, 0.08)",
-        soft: "0 18px 45px rgba(15, 23, 42, 0.08)",
-        lift: "0 18px 40px rgba(15, 23, 42, 0.12)",
-        deep: "0 24px 80px rgba(15, 23, 42, 0.18), 0 8px 24px rgba(35, 89, 153, 0.16)",
-        glow: "0 18px 42px rgba(23, 184, 216, 0.2), 0 8px 24px rgba(35, 89, 153, 0.18)",
       },
       borderRadius: {
         ui: "8px",

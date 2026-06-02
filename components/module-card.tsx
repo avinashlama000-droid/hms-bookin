@@ -8,7 +8,7 @@ type ModuleCardProps = {
 
 export function ModuleCard({ title, description, icon }: ModuleCardProps) {
   return (
-    <article className="rounded-lg border border-border bg-white p-5 shadow-sm transition-all duration-200 hover:border-brand-200 hover:shadow-soft">
+    <article className="rounded-lg border border-border bg-white p-5 transition-all duration-200 hover:border-brand-200">
       <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
         {icon}
       </div>
