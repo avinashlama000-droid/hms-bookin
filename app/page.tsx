@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { BookingSection } from "@/components/booking-section";
+import { BookingChatWidget } from "@/components/booking-chat-widget";
 import { Button } from "@/components/button";
 import { MealMenuSection } from "@/components/meal-menu-section";
 import { PublicLocationMap } from "@/components/public-location-map";
@@ -50,6 +51,7 @@ export default async function Home() {
         <MealMenuSection menus={mealMenus} />
         <FacilitiesSection />
         <LocationSection locations={publicLocations} stats={stats} />
+        <BookingChatWidget rooms={availableRooms} locations={publicLocations} mealMenus={mealMenus} />
         <SiteFooter />
       </main>
     </BookingSearchProvider>

@@ -11,11 +11,11 @@ export type AvailableRoom = {
   room_type: string;
   floor: string | null;
   capacity: number;
-  occupied_beds: number;
+  occupied_beds?: number;
   vacant_beds: number;
   monthly_rate: string | number | null;
-  room_attachment: string | null;
-  block_attachment: string | null;
+  room_attachment?: string | null;
+  block_attachment?: string | null;
 };
 
 export type PublicLocation = {
@@ -87,6 +87,63 @@ export type BookingResponse = {
   data?: {
     inquiry_number?: string | null;
     status?: string | null;
+  };
+};
+
+export type BookingAssistantIntent =
+  | "room_search"
+  | "location_search"
+  | "meal_menu"
+  | "booking"
+  | "handoff"
+  | "out_of_scope";
+
+export type BookingAssistantHistoryItem = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type BookingAssistantContact = {
+  name: string;
+  email: string;
+  phone: string;
+};
+
+export type BookingAssistantPrefill = {
+  tenant_slug: string;
+  block_id: number;
+  room_id: number;
+};
+
+export type BookingAssistantPayload = {
+  session_id: string;
+  message: string;
+  selected_room?: BookingAssistantPrefill | null;
+  contact?: BookingAssistantContact | null;
+  history?: BookingAssistantHistoryItem[];
+};
+
+export type BookingAssistantResponse = {
+  status?: string;
+  message: string;
+  intent: BookingAssistantIntent;
+  matches: {
+    rooms: AvailableRoom[];
+    locations: PublicLocation[];
+    meal_menus: PublicMealMenu[];
+  };
+  suggestions: string[];
+  booking_prefill: BookingAssistantPrefill | null;
+  limit?: {
+    remaining: number;
+    reset_at: string;
+  };
+  booking?: {
+    inquiry_number?: string | null;
+    status?: string | null;
+    reservation_id?: number;
+    reservation_status?: string | null;
+    expires_at?: string | null;
   };
 };
 
